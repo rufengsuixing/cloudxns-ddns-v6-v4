@@ -547,33 +547,42 @@ def main(argv):
     api=CloudXNS_API(api_k,sec_k,True)
     if not hostname:
         hostname=socket.gethostname()
-    ips=socket.getaddrinfo(hostname, None)
+    try:    
+        ips=socket.getaddrinfo(hostname, None)
+    except:
+        print("network error")
     if record4full:
         if re_ex4:
             for i in ips:
                 if re.match(re_ex4, i[4][0]):
                     ipv4=i[4][0]
-            if ipv4 :
-                print(ipv4)
-                api.domain_host_DDNS(record4full,ipv4)
-            else:
-                print("no ipv4 changed")
+            try:
+                if ipv4 :
+                    print(ipv4)
+                    api.domain_host_DDNS(record4full,ipv4)
+                else:
+                    print("no ipv4 changed")
+            except:
+                print("ipv4 not found")
         else:
             api.domain_host_DDNS(record4full)
             print("outside ip set")
     else:
         print("no ipv4 changed")
     for i in ips:
-            if re.match(re_ex6, i[4][0]):
-                ipv6=i[4][0]
-    if domain and record6 and ipv6 :
-        print(ipv6)
-        if api.is_differ(ipv6,record6+"."+domain,"v6"):
-            domain_id = api.get_domainID(domain)
-            record_id = api.get_recodeID(domain_id,record6)
-            api.domain_host_record_update(domain_id, record_id, record6, ipv6, "AAAA")
-    else:
-        print("no ipv6 changed") 
+        if re.match(re_ex6, i[4][0]):
+            ipv6=i[4][0]
+    try:
+        if domain and record6 and ipv6 :
+            print(ipv6)
+            if api.is_differ(ipv6,record6+"."+domain,"v6"):
+                domain_id = api.get_domainID(domain)
+                record_id = api.get_recodeID(domain_id,record6)
+                api.domain_host_record_update(domain_id, record_id, record6, ipv6, "AAAA")
+        else:
+            print("no ipv6 changed") 
+    except:
+        print("no ipv6 found")
     #domaincode=dict(api.domain_list()["data"])["id"]
     #api.domain_host_DDNS("example.com",ipv6)
     #domain_host_record_update(self, domain_id, record_id, host, host_value, record_type, line_id=1, mx=10, ttl=600, bak_ip=None)
