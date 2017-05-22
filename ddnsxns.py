@@ -506,18 +506,20 @@ def main(argv):
     record6=False
     re_ex6=False
     hostname=False
+    proxy_addr=False
+    proxy_type=False
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"h",["apik=","seck=","r4f=","re4=","do=","r6=","re6="])
+        opts, args = getopt.getopt(sys.argv[1:],"h",["apik=","seck=","r4f=","re4=","do=","r6=","re6=","otherpcname=","proxy_type=","proxy_addr="])
     except getopt.GetoptError:
         print ('ddnsxns.py -h for help')
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-h"):
             print("usage for internal ipv4 & ipv6")
-            print("ddnsxns.py --apik <key> --seck <key> --r4f <record4withdomain> --re4 <Regular expression to choose ipv4> --do <domain name> --r6 <record6> --re6 <Regular expression to choose ipv6> --otherpcname <the name of other pc if ddns for other>")
+            print("ddnsxns.py --apik <key> --seck <key> --r4f <record4withdomain> --re4 <Regular expression to choose ipv4> --do <domain name> --r6 <record6> --re6 <Regular expression to choose ipv6> [--otherpcname <the name of other pc if ddns for other>] [--proxy_type <sock5>] [--proxy_addr <127.0.0.1:1080>]")
             print("Regular expression examples: 10\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*   200[0-9]:.*:.*:.*:.*:.*" )
             print("usage for external ipv4 & ipv6")       
-            print("ddnsxns.py --apik <key> --seck <key> --r4f <record4withdomain> --do <domain name> --r6 <record6> --re6 <Regular expression to choose ipv6> --otherpcname <the name of other pc if ddns for other>")
+            print("ddnsxns.py --apik <key> --seck <key> --r4f <record4withdomain> --do <domain name> --r6 <record6> --re6 <Regular expression to choose ipv6> [--otherpcname <the name of other pc if ddns for other>] [--proxy_type <sock5>] [--proxy_addr <127.0.0.1:1080>]")
             print("if miss v4/v6 args will not change v4/v6 dns")
             sys.exit()
         elif opt in ("--apik"):
@@ -536,6 +538,10 @@ def main(argv):
             re_ex6 = arg
         elif opt in ("--otherpcname"):
             hostname = arg
+        elif opt in ("--proxy_type"):
+            proxy_type = arg
+        elif opt in ("--proxy_addr"):
+            proxy_addr = arg
     #child=subprocess.Popen("@echo off&for /f \"tokens=4 delims=. \" %a in ('ipconfig ^| findstr /r \"200[0-9]:.*:.*:.*:.*:.*\"') do (echo %a )", shell=True, stdout = subprocess.PIPE)
     #ipv6=child.communicate()[0][0:-3].decode()
     #ipv4=socket.gethostbyname(socket.gethostname())
@@ -544,6 +550,10 @@ def main(argv):
     #for i in ipv4t[2]:
     #   if re.match('10\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*', i):
     #       ipv4=i
+    if proxy_addr and proxy_type:
+        proxy_support = urllib.request.ProxyHandler({proxy_type:proxy_addr})
+        opener = urllib.request.build_opener(proxy_support)
+        urllib.request.install_opener(opener)
     api=CloudXNS_API(api_k,sec_k,True)
     if not hostname:
         hostname=socket.gethostname()
