@@ -4,10 +4,10 @@
 import hashlib
 import time
 import json
-import urllib
-from urllib import request
 import sys
 import getopt
+import requests
+import queue
 class CloudXNS_API():
     api_key = None
     secret_key = None
@@ -52,20 +52,25 @@ class CloudXNS_API():
         return headers
 
     def urlopen(self, URL, BODY='', METHOD='GET'):
+        global proxy_addr,proxy_type
         strdata = ''
         try:
-            req = urllib.request.Request(URL)
-            req.method = METHOD
             if len(BODY) != 0:
-                req.data = BODY.encode('UTF-8', 'ignore')
-            resp = urllib.request.urlopen(req)
-            strdata = resp.read().decode('UTF-8', 'ignore')
-        except urllib.error.HTTPError as e:
-            self.print_debug(e)
-            pass
-        except urllib.error.URLError as e:
-            self.print_debug(e)
-            pass
+                BODY = BODY.encode('UTF-8', 'ignore')
+            if proxy_addr and proxy_type:
+                proxies = {'http': proxy_type+'://'+proxy_addr,'https': proxy_type+'://'+proxy_addr,}
+                print(proxies)
+                if METHOD=='GET':
+                    cao=requests.get(URL,proxies=proxies)
+                if METHOD=="POST":
+                    cao=requests.post(URL,data=BODY,proxies=proxies)
+            else:   
+                if METHOD=='GET':
+                    cao=requests.get(URL)
+                if METHOD=="POST":
+                    cao=requests.post(URL,data=BODY)
+            cao.encoding='UTF-8'
+            strdata=cao.text    
         except Exception as e:
             self.print_debug(e)
             pass
@@ -73,20 +78,25 @@ class CloudXNS_API():
             return strdata
 
     def urlopen_api(self, URL, BODY, METHOD='GET'):
+        global proxy_addr,proxy_type
         strdata = ''
         try:
-            req = urllib.request.Request(URL, headers=self.get_api_headers(URL, BODY))
-            req.method = METHOD
             if len(BODY) != 0:
-                req.data = BODY.encode('UTF-8', 'ignore')
-            resp = urllib.request.urlopen(req)
-            strdata = resp.read().decode('UTF-8', 'ignore')
-        except urllib.error.HTTPError as e:
-            self.print_debug(e)
-            pass
-        except urllib.error.URLError as e:
-            self.print_debug(e)
-            pass
+                BODYs = BODY.encode('UTF-8', 'ignore')
+            if proxy_addr and proxy_type:
+                proxies = {'http': proxy_type+'://'+proxy_addr,'https': proxy_type+'://'+proxy_addr,}
+                print(proxies)
+                if METHOD=='GET':
+                    cao=requests.get(URL,proxies=proxies)
+                elif METHOD=="POST":
+                    cao=requests.post(URL,data=BODYs,headers=self.get_api_headers(URL, BODY),proxies=proxies)
+            else:
+                if METHOD=='GET':
+                    cao=requests.get(URL)
+                elif METHOD=="POST":
+                    cao=requests.post(URL,data=BODYs,headers=self.get_api_headers(URL, BODY))
+            cao.encoding='UTF-8'
+            strdata=cao.text
         except Exception as e:
             self.print_debug(e)
             pass
@@ -493,11 +503,11 @@ class CloudXNS_API():
             if ip!=ip_fromDNS:
                 return True
 def main(argv):
-    import urllib.request
     import subprocess
     import socket
     import re
     import time
+    global proxy_addr,proxy_type
     api_k=False
     sec_k=False
     record4full=False
@@ -506,8 +516,10 @@ def main(argv):
     record6=False
     re_ex6=False
     hostname=False
+    global proxy_addr,proxy_type
     proxy_addr=False
     proxy_type=False
+    
     try:
         opts, args = getopt.getopt(sys.argv[1:],"h",["apik=","seck=","r4f=","re4=","do=","r6=","re6=","otherpcname=","proxy_type=","proxy_addr="])
     except getopt.GetoptError:
@@ -516,10 +528,10 @@ def main(argv):
     for opt, arg in opts:
         if opt in ("-h"):
             print("usage for internal ipv4 & ipv6")
-            print("ddnsxns.py --apik <key> --seck <key> --r4f <record4withdomain> --re4 <Regular expression to choose ipv4> --do <domain name> --r6 <record6> --re6 <Regular expression to choose ipv6> [--otherpcname <the name of other pc if ddns for other>] [--proxy_type <sock5>] [--proxy_addr <127.0.0.1:1080>]")
+            print("ddnsxns.py --apik <key> --seck <key> --r4f <record4withdomain> --re4 <Regular expression to choose ipv4> --do <domain name> --r6 <record6> --re6 <Regular expression to choose ipv6> [--otherpcname <the name of other pc if ddns for other>] [--proxy_type <socks5>] [--proxy_addr <127.0.0.1:1080>]")
             print("Regular expression examples: 10\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*   200[0-9]:.*:.*:.*:.*:.*" )
             print("usage for external ipv4 & ipv6")       
-            print("ddnsxns.py --apik <key> --seck <key> --r4f <record4withdomain> --do <domain name> --r6 <record6> --re6 <Regular expression to choose ipv6> [--otherpcname <the name of other pc if ddns for other>] [--proxy_type <sock5>] [--proxy_addr <127.0.0.1:1080>]")
+            print("ddnsxns.py --apik <key> --seck <key> --r4f <record4withdomain> --do <domain name> --r6 <record6> --re6 <Regular expression to choose ipv6> [--otherpcname <the name of other pc if ddns for other>] [--proxy_type <socks5>] [--proxy_addr <127.0.0.1:1080>]")
             print("if miss v4/v6 args will not change v4/v6 dns")
             sys.exit()
         elif opt in ("--apik"):
@@ -550,10 +562,6 @@ def main(argv):
     #for i in ipv4t[2]:
     #   if re.match('10\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*', i):
     #       ipv4=i
-    if proxy_addr and proxy_type:
-        proxy_support = urllib.request.ProxyHandler({proxy_type:proxy_addr})
-        opener = urllib.request.build_opener(proxy_support)
-        urllib.request.install_opener(opener)
     api=CloudXNS_API(api_k,sec_k,True)
     if not hostname:
         hostname=socket.gethostname()
