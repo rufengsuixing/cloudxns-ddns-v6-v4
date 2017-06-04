@@ -8,6 +8,7 @@ import sys
 import getopt
 import requests
 import queue
+from os import environ
 class CloudXNS_API():
     api_key = None
     secret_key = None
@@ -52,23 +53,14 @@ class CloudXNS_API():
         return headers
 
     def urlopen(self, URL, BODY='', METHOD='GET'):
-        global proxy_addr,proxy_type
         strdata = ''
         try:
             if len(BODY) != 0:
                 BODY = BODY.encode('UTF-8', 'ignore')
-            if proxy_addr and proxy_type:
-                proxies = {'http': proxy_type+'://'+proxy_addr,'https': proxy_type+'://'+proxy_addr,}
-                print(proxies)
-                if METHOD=='GET':
-                    cao=requests.get(URL,proxies=proxies)
-                if METHOD=="POST":
-                    cao=requests.post(URL,data=BODY,proxies=proxies)
-            else:   
-                if METHOD=='GET':
-                    cao=requests.get(URL)
-                if METHOD=="POST":
-                    cao=requests.post(URL,data=BODY)
+            if METHOD=='GET':
+                cao=requests.get(URL)
+            elif METHOD=='POST':
+                cao=requests.post(URL,data=BODY)
             cao.encoding='UTF-8'
             strdata=cao.text    
         except Exception as e:
@@ -78,23 +70,18 @@ class CloudXNS_API():
             return strdata
 
     def urlopen_api(self, URL, BODY, METHOD='GET'):
-        global proxy_addr,proxy_type
         strdata = ''
         try:
             if len(BODY) != 0:
                 BODYs = BODY.encode('UTF-8', 'ignore')
-            if proxy_addr and proxy_type:
-                proxies = {'http': proxy_type+'://'+proxy_addr,'https': proxy_type+'://'+proxy_addr,}
-                print(proxies)
-                if METHOD=='GET':
-                    cao=requests.get(URL,proxies=proxies)
-                elif METHOD=="POST":
-                    cao=requests.post(URL,data=BODYs,headers=self.get_api_headers(URL, BODY),proxies=proxies)
-            else:
-                if METHOD=='GET':
-                    cao=requests.get(URL)
-                elif METHOD=="POST":
-                    cao=requests.post(URL,data=BODYs,headers=self.get_api_headers(URL, BODY))
+            if METHOD=='GET':
+                cao=requests.get(URL,headers=self.get_api_headers(URL, BODY))
+            elif METHOD=='POST':
+                cao=requests.post(URL,data=BODYs,headers=self.get_api_headers(URL, BODY))
+            elif METHOD=='PUT':
+                cao=requests.put(URL,data=BODYs,headers=self.get_api_headers(URL, BODY))
+            elif METHOD=='DELETE':
+                cao=requests.delete(URL,data=BODYs,headers=self.get_api_headers(URL, BODY))
             cao.encoding='UTF-8'
             strdata=cao.text
         except Exception as e:
@@ -516,7 +503,6 @@ def main(argv):
     record6=False
     re_ex6=False
     hostname=False
-    global proxy_addr,proxy_type
     proxy_addr=False
     proxy_type=False
     
@@ -562,6 +548,8 @@ def main(argv):
     #for i in ipv4t[2]:
     #   if re.match('10\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*', i):
     #       ipv4=i
+    environ['HTTPS_PROXY']=proxy_type+'://'+proxy_addr
+    environ['HTTP_PROXY']=proxy_type+'://'+proxy_addr
     api=CloudXNS_API(api_k,sec_k,True)
     if not hostname:
         hostname=socket.gethostname()
